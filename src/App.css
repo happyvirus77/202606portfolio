@@ -89,6 +89,18 @@ video {
   min-height: 100vh;
 }
 
+.sync-alert {
+  width: min(var(--max), calc(100% - 32px));
+  margin: 12px auto 0;
+  padding: 10px 14px;
+  border: 1px solid rgba(194, 65, 12, 0.28);
+  border-radius: var(--radius);
+  background: rgba(194, 65, 12, 0.1);
+  color: var(--danger);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
 .site-header {
   position: sticky;
   top: 0;

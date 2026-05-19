@@ -8,6 +8,7 @@ import RegisterPage from './pages/RegisterPage.jsx';
 import EditPage from './pages/EditPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 import { students as initialStudents } from './data/students.js';
+import { fetchRemoteStudents, hasRemotePortfolioStore, saveRemoteStudent } from './services/portfolioStore.js';
 
 const STORAGE_KEY = 'portfolioStudents';
 const REMOVED_LABELS = new Set(['Node.js', '풀스택']);
@@ -83,6 +84,36 @@ export default function App() {
       return cleanPortfolioStudents(initialStudents);
     }
   });
+  const [remoteStoreError, setRemoteStoreError] = useState('');
+
+  useEffect(() => {
+    if (!hasRemotePortfolioStore) {
+      return;
+    }
+
+    let isMounted = true;
+
+    async function loadRemoteStudents() {
+      try {
+        const remoteStudents = await fetchRemoteStudents();
+
+        if (isMounted && remoteStudents) {
+          setPortfolioStudents(mergeWithInitialStudents(remoteStudents));
+          setRemoteStoreError('');
+        }
+      } catch (error) {
+        if (isMounted) {
+          setRemoteStoreError(error.message);
+        }
+      }
+    }
+
+    loadRemoteStudents();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     document.documentElement.dataset.theme = darkMode ? 'dark' : 'light';
@@ -103,20 +134,36 @@ export default function App() {
     [portfolioStudents],
   );
 
+  const persistPortfolio = async (student) => {
+    if (!hasRemotePortfolioStore) {
+      return;
+    }
+
+    try {
+      await saveRemoteStudent(student);
+      setRemoteStoreError('');
+    } catch (error) {
+      setRemoteStoreError(error.message);
+    }
+  };
+
   const handleRegisterPortfolio = (student) => {
     setPortfolioStudents((currentStudents) => [student, ...currentStudents]);
+    persistPortfolio(student);
   };
 
   const handleUpdatePortfolio = (updatedStudent) => {
     setPortfolioStudents((currentStudents) =>
       currentStudents.map((student) => (student.id === updatedStudent.id ? updatedStudent : student)),
     );
+    persistPortfolio(updatedStudent);
   };
 
   return (
     <div className="app-shell">
       <ScrollToTop />
       <Header darkMode={darkMode} onToggleTheme={() => setDarkMode((value) => !value)} />
+      {remoteStoreError && <div className="sync-alert">공용 저장소 연결에 실패해서 이 브라우저에만 임시 저장됩니다.</div>}
       <main>
         <Routes>
           <Route path="/" element={<HomePage students={portfolioStudents} stats={archiveStats} />} />
